@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>粽星送福 · 端午安康</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #F5E6CA;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            touch-action: manipulation;
+        }
+        .header {
+            position: absolute;
+            top: 30px;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .header h1 {
+            font-size: clamp(24px, 6vw, 36px);
+            color: #5B8C5A;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-shadow: 1px 1px 3px rgba(255,255,255,0.9);
+        }
+        .header p {
+            font-size: 14px;
+            color: #8B7355;
+            margin-top: 4px;
+        }
+
+        /* 粽子容器 */
+        #zongzi-container {
+            position: relative;
+            cursor: pointer;
+            z-index: 5;
+            transition: transform 0.15s;
+        }
+        #zongzi-container:active {
+            transform: scale(0.92);
+        }
+        #zongzi-svg {
+            width: 180px;
+            height: auto;
+            max-width: 60vw;
+            filter: drop-shadow(0 8px 12px rgba(91,140,90,0.25));
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* 气泡 */
+        .bubble {
+            position: absolute;
+            bottom: 115%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: rgba(255,255,255,0.95);
+            color: #C23B22;
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-size: 16px;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.35s ease;
+            border: 1px solid #E8D0B0;
+        }
+        .bubble::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -8px;
+            border-width: 8px;
+            border-style: solid;
+            border-color: rgba(255,255,255,0.95) transparent transparent transparent;
+        }
+        .bubble.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 底部提示 */
+        .footer {
+            position: absolute;
+            bottom: 35px;
+            width: 100%;
+            text-align: center;
+            color: #A08060;
+            font-size: 13px;
+            z-index: 10;
+            pointer-events: none;
+            line-height: 1.6;
+        }
+
+        /* 飘落的叶子 */
+        .leaf {
+            position: absolute;
+            top: -40px;
+            width: 18px;
+            height: 30px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 30'%3E%3Cpath d='M9 27C5 21 2 15 2 9 2 4 6 1 9 1c3 0 7 3 7 8 0 6-3 12-7 18z' fill='%235B8C5A' opacity='0.5'/%3E%3C/svg%3E") no-repeat center/contain;
+            pointer-events: none;
+            animation: fall linear infinite;
+            z-index: 1;
+        }
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0.7; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* 祈福卡片（长按弹出） */
+        .card-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .card-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .card {
+            background: #FFFBF0;
+            border: 4px solid #C23B22;
+            border-radius: 24px;
+            padding: 32px 28px;
+            width: 300px;
+            max-width: 85vw;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .card-overlay.active .card {
+            transform: scale(1);
+        }
+        .card .icon { font-size: 52px; }
+        .card .msg {
+            font-size: 20px;
+            color: #2C2417;
+            margin: 16px 0 10px;
+            line-height: 1.5;
+        }
+        .card .divider {
+            border-top: 2px dashed #C23B22;
+            margin: 14px 0;
+        }
+        .card .from {
+            color: #7A6843;
+            font-size: 14px;
+        }
+        .card .tip {
+            color: #A0896B;
+            font-size: 12px;
+            margin-top: 16px;
+        }
+        .card button {
+            margin-top: 18px;
+            background: #C23B22;
+            color: white;
+            border: none;
+            padding: 10px 32px;
+            border-radius: 99px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 标题 -->
+    <div class="header">
+        <h1>粽星送福</h1>
+        <p>端午安康 · 戳戳好运来</p>
+    </div>
+
+    <!-- 粽子交互区 -->
+    <div id="zongzi-container">
+        <svg id="zongzi-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- 粽身 -->
+            <path d="M60,40 Q100,-10 140,40 L130,120 Q100,150 70,120 Z" fill="#FDF6EC" stroke="#5B8C5A" stroke-width="2"/>
+            <!-- 粽叶纹 -->
+            <path d="M85,50 Q100,45 115,50" stroke="#5B8C5A" stroke-width="1.5" fill="none" opacity="0.4"/>
+            <path d="M80,70 Q100,65 120,70" stroke="#5B8C5A" stroke-width="1.5" fill="none" opacity="0.4"/>
+            <path d="M82,90 Q100,85 118,90" stroke="#5B8C5A" stroke-width="1.5" fill="none" opacity="0.4"/>
+            <path d="M84,110 Q100,105 116,110" stroke="#5B8C5A" stroke-width="1.5" fill="none" opacity="0.4"/>
+            <!-- 捆绳 -->
+            <line x1="75" y1="57" x2="125" y2="57" stroke="#C23B22" stroke-width="3" stroke-linecap="round"/>
+            <line x1="77" y1="73" x2="123" y2="73" stroke="#C23B22" stroke-width="3" stroke-linecap="round"/>
+            <line x1="79" y1="89" x2="121" y2="89" stroke="#C23B22" stroke-width="3" stroke-linecap="round"/>
+            <line x1="81" y1="106" x2="119" y2="106" stroke="#C23B22" stroke-width="3" stroke-linecap="round"/>
+            <!-- 表情组（默认微笑） -->
+            <g id="face-group">
+                <!-- 左眼 -->
+                <circle cx="88" cy="80" r="4" fill="#2C2417"/>
+                <!-- 右眼 -->
+                <circle cx="112" cy="80" r="4" fill="#2C2417"/>
+                <!-- 嘴巴（微笑弧线） -->
+                <path d="M93,94 Q100,102 107,94" stroke="#2C2417" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                <!-- 腮红 -->
+                <ellipse cx="80" cy="90" rx="7" ry="4" fill="#F4978E" opacity="0.35"/>
+                <ellipse cx="120" cy="90" rx="7" ry="4" fill="#F4978E" opacity="0.35"/>
+            </g>
+        </svg>
+        <div class="bubble" id="bubble">👋 戳我接福</div>
+    </div>
+
+    <!-- 底部提示 -->
+    <div class="footer">
+        👆 点击粽子 · 📱 摇一摇换表情 · ⏳ 长按存福卡
+    </div>
+
+    <!-- 祈福卡片（隐藏） -->
+    <div class="card-overlay" id="cardOverlay">
+        <div class="card">
+            <div class="icon">🍙</div>
+            <div class="msg" id="cardMsg">粽叶裹住好运，丝线系住平安</div>
+            <div class="divider"></div>
+            <div class="from">—— 来自「粽星送福」的祝福</div>
+            <div class="tip">📸 截屏此卡，分享给重要的人</div>
+            <button onclick="closeCard()">我知道了 ✦</button>
+        </div>
+    </div>
+
+    <script>
+        // ---------- 祝福语库 ----------
+        const blessings = [
+            "粽叶裹住好运，丝线系住平安",
+            "五毒退散，百事皆安",
+            "艾香所到之处，皆是安康人家",
+            "龙舟已过万重浪，此后风平浪静",
+            "夏安，身安，心安——三安齐至",
+            "糯米粘粘，财运连连；艾草长长，福气满满",
+            "端阳之日，驱得走暑热，留得住自在",
+            "愿你所念之人，岁岁皆安康",
+            "甜的不只是粽，是你今年的日子",
+            "咸香入味的人生，才下肚就让人惦记",
+            "五月辣一辣，百病都退散！",
+            "软糯的牵挂，裹了一层又一层的在乎",
+            "清凉一夏，暑气和烦心事一起化掉~",
+            "返璞归真，平平安安，就是好味道",
+            "粽子拍了拍你说：端午安康呀！",
+            "好事总会发生，就像粽子总会熟透",
+            "一口吃掉烦恼，两口咽下忧愁，三口全是福气",
+            "今日宜：吃粽、发呆、收祝福",
+            "你不是胖了，是被福气撑圆了",
+            "祝你的生活像粽子一样：外表朴素，内心甜美"
+        ];
+        let usedIndices = [];
+        function getRandomBlessing() {
+            if (usedIndices.length === blessings.length) usedIndices = [];
+            let idx;
+            do { idx = Math.floor(Math.random() * blessings.length); } while (usedIndices.includes(idx));
+            usedIndices.push(idx);
+            return blessings[idx];
+        }
+
+        // ---------- 表情库 ----------
+        const faces = [
+            // 微笑（默认）
+            `<circle cx="88" cy="80" r="4" fill="#2C2417"/>
+             <circle cx="112" cy="80" r="4" fill="#2C2417"/>
+             <path d="M93,94 Q100,102 107,94" stroke="#2C2417" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+             <ellipse cx="80" cy="90" rx="7" ry="4" fill="#F4978E" opacity="0.35"/>
+             <ellipse cx="120" cy="90" rx="7" ry="4" fill="#F4978E" opacity="0.35"/>`,
+            // 大笑
+            `<circle cx="88" cy="80" r="4" fill="#2C2417"/>
+             <circle cx="112" cy="80" r="4" fill="#2C2417"/>
+             <path d="M90,92 Q100,106 110,92" stroke="#2C2417" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+             <ellipse cx="78" cy="90" rx="8" ry="5" fill="#F4978E" opacity="0.4"/>
+             <ellipse cx="122" cy="90" rx="8" ry="5" fill="#F4978E" opacity="0.4"/>`,
+            // 害羞
+            `<circle cx="88" cy="80" r="4" fill="#2C2417"/>
+             <circle cx="112" cy="80" r="4" fill="#2C2417"/>
+             <path d="M94,96 Q100,102 106,96" stroke="#2C2417" stroke-width="2" fill="none" stroke-linecap="round"/>
+             <ellipse cx="78" cy="92" rx="9" ry="6" fill="#F4978E" opacity="0.5"/>
+             <ellipse cx="122" cy="92" rx="9" ry="6" fill="#F4978E" opacity="0.5"/>
+             <path d="M74,72 Q78,67 84,70" stroke="#F4978E" stroke-width="1.5" fill="none"/>
+             <path d="M116,69 Q122,65 126,70" stroke="#F4978E" stroke-width="1.5" fill="none"/>`,
+            // 生气
+            `<circle cx="86" cy="78" r="4" fill="#2C2417"/>
+             <circle cx="114" cy="78" r="4" fill="#2C2417"/>
+             <path d="M92,96 Q100,92 108,96" stroke="#2C2417" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+             <ellipse cx="78" cy="90" rx="7" ry="4" fill="#F4978E" opacity="0.3"/>
+             <ellipse cx="122" cy="90" rx="7" ry="4" fill="#F4978E" opacity="0.3"/>
+             <path d="M76,70 L84,76 M76,76 L84,70" stroke="#2C2417" stroke-width="2" stroke-linecap="round"/>
+             <path d="M116,70 L124,76 M116,76 L124,70" stroke="#2C2417" stroke-width="2" stroke-linecap="round"/>`
+        ];
+        let currentFace = 0;
+        const faceGroup = document.getElementById('face-group');
+
+        function switchFace() {
+            currentFace = (currentFace + 1) % faces.length;
+            faceGroup.innerHTML = faces[currentFace];
+        }
+
+        // ---------- 点击祝福 ----------
+        const container = document.getElementById('zongzi-container');
+        const bubble = document.getElementById('bubble');
+        const svg = document.getElementById('zongzi-svg');
+
+        container.addEventListener('click', function() {
+            const msg = getRandomBlessing();
+            bubble.textContent = msg;
+            bubble.classList.add('show');
+            svg.style.transform = 'translateY(-18px)';
+            setTimeout(() => {
+                bubble.classList.remove('show');
+                svg.style.transform = 'translateY(0)';
+            }, 2200);
+        });
+
+        // ---------- 摇一摇换表情 ----------
+        let lastAcc = { x: 0, y: 0, z: 0 };
+        let lastShakeTime = 0;
+        if (window.DeviceMotionEvent) {
+            window.addEventListener('devicemotion', function(e) {
+                const acc = e.accelerationIncludingGravity;
+                if (!acc) return;
+                const dx = Math.abs(acc.x - lastAcc.x);
+                const dy = Math.abs(acc.y - lastAcc.y);
+                const dz = Math.abs(acc.z - lastAcc.z);
+                const total = dx + dy + dz;
+                const now = Date.now();
+                if (total > 40 && now - lastShakeTime > 700) {
+                    lastShakeTime = now;
+                    switchFace();
+                }
+                lastAcc = { x: acc.x, y: acc.y, z: acc.z };
+            });
+        }
+
+        // 桌面端模拟：鼠标拖拽切换（左右快速滑动）
+        let dragStartX = 0;
+        let isDrag = false;
+        container.addEventListener('mousedown', function(e) {
+            dragStartX = e.clientX;
+            isDrag = true;
+        });
+        window.addEventListener('mousemove', function(e) {
+            if (!isDrag) return;
+            const diff = e.clientX - dragStartX;
+            if (Math.abs(diff) > 60) {
+                switchFace();
+                dragStartX = e.clientX; // 重置，允许连续
+            }
+        });
+        window.addEventListener('mouseup', function() {
+            isDrag = false;
+        });
+
+        // 桌面端额外：双击粽子也换表情
+        container.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            switchFace();
+        });
+
+        // ---------- 长按生成祈福卡 ----------
+        let longPressTimer = null;
+        let isLongPressed = false;
+
+        function startLongPress() {
+            longPressTimer = setTimeout(function() {
+                isLongPressed = true;
+                // 取当前气泡文字，若无则用随机祝福
+                let msg = bubble.textContent;
+                if (!msg || msg === '👋 戳我接福') {
+                    msg = getRandomBlessing();
+                }
+                document.getElementById('cardMsg').textContent = msg;
+                document.getElementById('cardOverlay').classList.add('active');
+                if (navigator.vibrate) navigator.vibrate(50);
+            }, 2600);
+        }
+        function cancelLongPress() {
+            clearTimeout(longPressTimer);
+            if (isLongPressed) return;
+        }
+
+        container.addEventListener('mousedown', startLongPress);
+        container.addEventListener('mouseup', cancelLongPress);
+        container.addEventListener('mouseleave', cancelLongPress);
+        container.addEventListener('touchstart', startLongPress, { passive: true });
+        container.addEventListener('touchend', cancelLongPress);
+        container.addEventListener('touchcancel', cancelLongPress);
+
+        function closeCard() {
+            document.getElementById('cardOverlay').classList.remove('active');
+            isLongPressed = false;
+        }
+
+        // ---------- 生成飘落艾草叶 ----------
+        function createLeaves() {
+            for (let i = 0; i < 12; i++) {
+                const leaf = document.createElement('div');
+                leaf.className = 'leaf';
+                leaf.style.left = Math.random() * 100 + '%';
+                leaf.style.width = (14 + Math.random() * 12) + 'px';
+                leaf.style.height = (24 + Math.random() * 16) + 'px';
+                leaf.style.animationDuration = (8 + Math.random() * 10) + 's';
+                leaf.style.animationDelay = (Math.random() * 12) + 's';
+                document.body.appendChild(leaf);
+            }
+        }
+        createLeaves();
+    </script>
+</body>
+</html>
